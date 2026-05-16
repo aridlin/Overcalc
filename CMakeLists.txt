@@ -1,0 +1,23 @@
+cmake_minimum_required(VERSION 3.20)
+project(overcalc LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+add_library(overcalc_core src/ast.cpp src/parser.cpp src/eval.cpp src/render.cpp)
+target_include_directories(overcalc_core PUBLIC include)
+add_executable(overcalc src/main.cpp)
+target_link_libraries(overcalc PRIVATE overcalc_core)
+include(CTest)
+if(BUILD_TESTING)
+  add_test(NAME eval_add COMMAND overcalc "2+2")
+  set_tests_properties(eval_add PROPERTIES PASS_REGULAR_EXPRESSION "│ 4")
+
+  add_test(NAME eval_frac COMMAND overcalc "\\frac{1}{3}")
+  set_tests_properties(eval_frac PROPERTIES PASS_REGULAR_EXPRESSION "│ 1/3")
+
+  add_test(NAME eval_pow COMMAND overcalc "2^5")
+  set_tests_properties(eval_pow PROPERTIES PASS_REGULAR_EXPRESSION "│ 32")
+
+  add_test(NAME eval_sqrt COMMAND overcalc "\\sqrt{16}")
+  set_tests_properties(eval_sqrt PROPERTIES PASS_REGULAR_EXPRESSION "│ 4")
+endif()
