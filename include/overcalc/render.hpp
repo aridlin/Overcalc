@@ -3,7 +3,10 @@
 
 namespace overcalc {
 
-// Renders a TUI-style panelized output with pretty unicode math.
-std::string render_boxed(const std::string& input, const std::string& result);
+struct RenderOptions {
+  bool ascii = false;
+};
 
-}
+std::string render_boxed(const std::string& input, const std::string& result, const RenderOptions& options = {});
+
+}  // namespace overcalc
