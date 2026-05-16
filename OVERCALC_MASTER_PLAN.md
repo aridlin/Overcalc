@@ -271,6 +271,25 @@ A milestone is done only if:
 
 ---
 
+## Next Roadmap Execution (Current Focus)
+
+### Completed so far
+- Project scaffold with CMake, CLI executable, and test harness.
+- Arithmetic and `\\frac` parsing to unified AST.
+- Exact rational evaluator.
+- Initial panelized Unicode pretty renderer.
+
+### In-progress next slice (Phase 1 continuation)
+1. Add superscript and subscript AST nodes and parser support (`x^2`, `x_0`, `a_{n+1}`).
+2. Implement root rendering and parsing (`\\sqrt{x}` and indexed roots later).
+3. Introduce ASCII fallback rendering (`--ascii`) for incompatible terminals.
+4. Add renderer snapshot tests for nested fractions and precedence.
+5. Add `--latex-output` mode for normalized LaTeX serialization.
+
+### Short-term milestones (next 2 weeks)
+- Week A: superscript/subscript parse+render + tests.
+- Week B: `\\sqrt` parse+render + ASCII fallback + tests.
+
 ## First 30-Day Action Plan
 
 Week 1:
