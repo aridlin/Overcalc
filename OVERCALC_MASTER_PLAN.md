@@ -278,13 +278,21 @@ A milestone is done only if:
 - Arithmetic and `\\frac` parsing to unified AST.
 - Exact rational evaluator.
 - Initial panelized Unicode pretty renderer.
+- Superscript/subscript parse+render support, including braced subscripts like `a_{n+1}`.
+- `\\sqrt{...}` parse+render/eval support.
+- ASCII fallback rendering via `--ascii`.
+- Normalized LaTeX serialization via `--latex-output`.
+- Greek symbol command map for common LaTeX symbols such as `\\alpha` and `\\pi`.
+- Source-position parser diagnostics with CLI caret output.
+- Precedence-aware infix, LaTeX, and pretty-render output for required parentheses.
+- Indexed root parsing, rendering, serialization, and evaluation for forms like `\\sqrt[3]{8}`.
 
 ### In-progress next slice (Phase 1 continuation)
-1. Add superscript and subscript AST nodes and parser support (`x^2`, `x_0`, `a_{n+1}`).
-2. Implement root rendering and parsing (`\\sqrt{x}` and indexed roots later).
-3. Introduce ASCII fallback rendering (`--ascii`) for incompatible terminals.
-4. Add renderer snapshot tests for nested fractions and precedence.
-5. Add `--latex-output` mode for normalized LaTeX serialization.
+1. Add broader renderer snapshot coverage for nested fractions, roots, scripts, and precedence.
+2. Replace ad hoc CTest regex checks with proper golden snapshot test fixtures.
+3. Begin exact symbolic simplification kernels for Phase 3.
+4. Add source spans to AST nodes so diagnostics can point at semantic errors, not only parse errors.
+5. Expand indexed roots to symbolic root simplification and richer negative-domain handling.
 
 ### Short-term milestones (next 2 weeks)
 - Week A: superscript/subscript parse+render + tests.

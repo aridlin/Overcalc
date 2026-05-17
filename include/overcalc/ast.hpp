@@ -11,9 +11,22 @@ struct Number final : Expr {
   explicit Number(long long v) : value(v) {}
 };
 
+struct Decimal final : Expr {
+  std::string text;
+  long double value;
+  Decimal(std::string t, long double v) : text(std::move(t)), value(v) {}
+};
+
 struct Symbol final : Expr {
   std::string name;
   explicit Symbol(std::string n) : name(std::move(n)) {}
+};
+
+struct FunctionCall final : Expr {
+  std::string name;
+  std::unique_ptr<Expr> arg;
+  FunctionCall(std::string n, std::unique_ptr<Expr> a)
+      : name(std::move(n)), arg(std::move(a)) {}
 };
 
 struct Binary final : Expr {
@@ -47,7 +60,10 @@ struct Subscript final : Expr {
 
 struct Sqrt final : Expr {
   std::unique_ptr<Expr> radicand;
+  std::unique_ptr<Expr> index;
   explicit Sqrt(std::unique_ptr<Expr> r) : radicand(std::move(r)) {}
+  Sqrt(std::unique_ptr<Expr> r, std::unique_ptr<Expr> i)
+      : radicand(std::move(r)), index(std::move(i)) {}
 };
 
 }  // namespace overcalc
