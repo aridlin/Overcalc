@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(overcalc_core
+  src/editor.cpp
   src/ast.cpp
   src/parser.cpp
   src/eval.cpp
@@ -28,6 +29,12 @@ if(BUILD_TESTING)
   file(WRITE "${OVERCALC_TEST_FORMULA_FILE}" "sin(pi/2)+50%")
   set(OVERCALC_BATCH_FORMULA_FILE "${CMAKE_CURRENT_BINARY_DIR}/formula-batch.txt")
   file(WRITE "${OVERCALC_BATCH_FORMULA_FILE}" "2+2\n# comment\nsin(pi/2)+50%\n")
+  set(OVERCALC_TUI_INPUT_FILE "${CMAKE_CURRENT_BINARY_DIR}/tui-input.txt")
+  file(WRITE "${OVERCALC_TUI_INPUT_FILE}" "x+0\n:derive x\nx^2\n:q\n")
+  set(OVERCALC_TUI_PARTIAL_INPUT_FILE "${CMAKE_CURRENT_BINARY_DIR}/tui-partial-input.txt")
+  file(WRITE "${OVERCALC_TUI_PARTIAL_INPUT_FILE}" "1+\n\\frac{1}{\n:q\n")
+  set(OVERCALC_TUI_MATH_ERROR_INPUT_FILE "${CMAKE_CURRENT_BINARY_DIR}/tui-math-error-input.txt")
+  file(WRITE "${OVERCALC_TUI_MATH_ERROR_INPUT_FILE}" "\\frac{\\sqrt{4}2}{2-2}\n:q\n")
   set(OVERCALC_SUGGESTION_CHECK "${CMAKE_CURRENT_BINARY_DIR}/check-latex-suggestion.cmake")
   file(WRITE "${OVERCALC_SUGGESTION_CHECK}" [=[
 execute_process(
@@ -42,6 +49,66 @@ if(NOT result EQUAL 1)
 endif()
 if(NOT combined MATCHES "did you mean \\\\alpha")
   message(FATAL_ERROR "missing suggestion in output: ${combined}")
+endif()
+]=])
+  set(OVERCALC_TUI_CHECK "${CMAKE_CURRENT_BINARY_DIR}/check-tui.cmake")
+  file(WRITE "${OVERCALC_TUI_CHECK}" [=[
+execute_process(
+  COMMAND "${OVERCALC_EXE}" --no-color --tui
+  INPUT_FILE "${TUI_INPUT_FILE}"
+  RESULT_VARIABLE result
+  OUTPUT_VARIABLE out
+  ERROR_VARIABLE err
+)
+string(CONCAT combined "${out}" "${err}")
+if(NOT result EQUAL 0)
+  message(FATAL_ERROR "tui failed: ${combined}")
+endif()
+if(NOT combined MATCHES "Simplified")
+  message(FATAL_ERROR "missing simplified preview: ${combined}")
+endif()
+if(NOT combined MATCHES "Derivative d/dx")
+  message(FATAL_ERROR "missing derivative preview: ${combined}")
+endif()
+]=])
+  set(OVERCALC_TUI_PARTIAL_CHECK "${CMAKE_CURRENT_BINARY_DIR}/check-tui-partial.cmake")
+  file(WRITE "${OVERCALC_TUI_PARTIAL_CHECK}" [=[
+execute_process(
+  COMMAND "${OVERCALC_EXE}" --no-color --tui
+  INPUT_FILE "${TUI_PARTIAL_INPUT_FILE}"
+  RESULT_VARIABLE result
+  OUTPUT_VARIABLE out
+  ERROR_VARIABLE err
+)
+string(CONCAT combined "${out}" "${err}")
+if(NOT result EQUAL 0)
+  message(FATAL_ERROR "tui partial failed: ${combined}")
+endif()
+if(combined MATCHES "Error:")
+  message(FATAL_ERROR "partial tui preview should not print Error: ${combined}")
+endif()
+if(NOT combined MATCHES "Editing  incomplete expression")
+  message(FATAL_ERROR "missing editing fallback: ${combined}")
+endif()
+]=])
+  set(OVERCALC_TUI_MATH_ERROR_CHECK "${CMAKE_CURRENT_BINARY_DIR}/check-tui-math-error.cmake")
+  file(WRITE "${OVERCALC_TUI_MATH_ERROR_CHECK}" [=[
+execute_process(
+  COMMAND "${OVERCALC_EXE}" --no-color --tui
+  INPUT_FILE "${TUI_MATH_ERROR_INPUT_FILE}"
+  RESULT_VARIABLE result
+  OUTPUT_VARIABLE out
+  ERROR_VARIABLE err
+)
+string(CONCAT combined "${out}" "${err}")
+if(NOT result EQUAL 0)
+  message(FATAL_ERROR "tui math-error failed: ${combined}")
+endif()
+if(NOT combined MATCHES "Math error  division by zero")
+  message(FATAL_ERROR "missing math error: ${combined}")
+endif()
+if(combined MATCHES "Editing  incomplete expression")
+  message(FATAL_ERROR "parseable math error should not be labeled incomplete: ${combined}")
 endif()
 ]=])
   set(OVERCALC_BATCH_ERROR_CHECK "${CMAKE_CURRENT_BINARY_DIR}/check-batch-error.cmake")
@@ -84,6 +151,12 @@ endif()
 
   add_test(NAME timing_mode COMMAND overcalc --no-color --timing "2+2")
   set_tests_properties(timing_mode PROPERTIES PASS_REGULAR_EXPRESSION "timing_ms [0-9]+\\.[0-9]+")
+
+  add_test(NAME tui_script_mode COMMAND "${CMAKE_COMMAND}" -DOVERCALC_EXE=$<TARGET_FILE:overcalc> -DTUI_INPUT_FILE=${OVERCALC_TUI_INPUT_FILE} -P "${OVERCALC_TUI_CHECK}")
+
+  add_test(NAME tui_partial_mode COMMAND "${CMAKE_COMMAND}" -DOVERCALC_EXE=$<TARGET_FILE:overcalc> -DTUI_PARTIAL_INPUT_FILE=${OVERCALC_TUI_PARTIAL_INPUT_FILE} -P "${OVERCALC_TUI_PARTIAL_CHECK}")
+
+  add_test(NAME tui_math_error_mode COMMAND "${CMAKE_COMMAND}" -DOVERCALC_EXE=$<TARGET_FILE:overcalc> -DTUI_MATH_ERROR_INPUT_FILE=${OVERCALC_TUI_MATH_ERROR_INPUT_FILE} -P "${OVERCALC_TUI_MATH_ERROR_CHECK}")
 
   add_test(NAME derivative_power COMMAND overcalc --no-color --derive x "x^2")
   set_tests_properties(derivative_power PROPERTIES PASS_REGULAR_EXPRESSION "Derivative d/dx.*Form     2 \\* x")
@@ -288,3 +361,10 @@ endif()
   add_test(NAME unary_minus COMMAND overcalc --no-color "-3^2")
   set_tests_properties(unary_minus PROPERTIES PASS_REGULAR_EXPRESSION "9")
 endif()
+
+if(BUILD_TESTING)
+  add_executable(overcalc_editor_test tests/editor_test.cpp)
+  target_link_libraries(overcalc_editor_test PRIVATE overcalc_core)
+  add_test(NAME structured_editor COMMAND overcalc_editor_test)
+endif()
+install(TARGETS overcalc RUNTIME DESTINATION bin)

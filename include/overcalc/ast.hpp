@@ -1,10 +1,17 @@
 #pragma once
+#include <cstddef>
 #include <memory>
 #include <string>
 
 namespace overcalc {
 
-struct Expr { virtual ~Expr() = default; };
+inline constexpr std::size_t npos = static_cast<std::size_t>(-1);
+
+struct Expr {
+  std::size_t start = npos;
+  std::size_t end = npos;
+  virtual ~Expr() = default;
+};
 
 struct Number final : Expr {
   long long value;
