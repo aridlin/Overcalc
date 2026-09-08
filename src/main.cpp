@@ -71,7 +71,8 @@ std::string usage_text() {
       "  --ast-json          Print AST JSON\n"
       "  --timing            Print elapsed execution time\n"
       "  --batch             Evaluate one expression per input line\n"
-      "  --tui               Start interactive editor/preview mode\n"
+      "  --tui               Start visual editor (Ctrl+O prints and exits)\n"
+      "  --backend           Render input as plain Unicode only (stdin by default)\n"
       "  --derive VAR        Differentiate with respect to VAR\n"
       "  --steps             Show evaluation steps\n"
       "  --file PATH         Read expression from a file\n"
@@ -1252,7 +1253,7 @@ overcalc::EditLayout template_preview(std::size_t index) {
   return sample.layout();
 }
 
-int run_visual_editor(const overcalc::RenderOptions& opt) {
+int run_visual_editor(const overcalc::RenderOptions& opt, std::string& exported, std::string& exported_derive) {
 #ifdef _WIN32
   TuiConsoleMode raw;
 #else
@@ -1268,8 +1269,14 @@ int run_visual_editor(const overcalc::RenderOptions& opt) {
   std::size_t selected = 0;
   int scroll_x = 0, scroll_y = 0;
   std::pair<int,int> previous_size{0,0};
-  bool derive = false;
+  bool derive = !exported_derive.empty();
   std::string status = "Type to begin · / fraction · ^ superscript · Ctrl+R square root";
+  auto export_current = [&]() {
+    if(!editor.complete()) {status="Fill the empty fields before printing";return false;}
+    try {(void)overcalc::parse(editor.source());}
+    catch(const std::exception&) {status="Finish the expression before printing";return false;}
+    exported=editor.source();exported_derive=derive?"x":"";return true;
+  };
   while (true) {
     auto [cols, rows] = editor_terminal_size();
     if(previous_size!=std::make_pair(cols,rows)) { screen.invalidate(); previous_size={cols,rows}; }
@@ -1301,8 +1308,8 @@ int run_visual_editor(const overcalc::RenderOptions& opt) {
     int equation_y=canvas_top+std::max(0,(canvas_height-static_cast<int>(layout.lines.size()))/2);
     EquationFrame frame(width,rows,opt.color);
     frame.text(margin,1,U"◈  OverCalc",EquationFrame::Accent);
-    frame.text(margin+14,1,U"E Q U A T I O N   S T U D I O",EquationFrame::Muted);
-    if(panel_width>75) frame.text(margin+panel_width-23,1,derive?U"d/dx  DERIVATIVE":U"●  LIVE EVALUATION",EquationFrame::Green);
+    if(panel_width>70) frame.text(margin+14,1,U"E Q U A T I O N   S T U D I O",EquationFrame::Muted);
+    frame.text(margin+panel_width-19,1,U"[ Print & exit ^O ]",EquationFrame::Accent);
     frame.panel(margin,3,panel_width,result_top-3,U" EQUATION ");
     for(int y=0;y<canvas_height;++y) {
       int ly=y+scroll_y;
@@ -1371,9 +1378,11 @@ int run_visual_editor(const overcalc::RenderOptions& opt) {
     if (editor_terminal_size()!=std::make_pair(cols,rows)) continue;
     auto event=read_tui_event();
     if(event.type==TuiEventType::CtrlC) break;
+    if(event.type==TuiEventType::Character && event.ch==15) {if(export_current()) break;continue;}
     if(event.type==TuiEventType::Escape) { if(palette) { palette=false; continue; } break; }
     if(event.type==TuiEventType::Character && event.ch==16) { palette=!palette; continue; }
     if(event.type==TuiEventType::MousePress) {
+      if(event.y==2 && event.x-1>=margin+panel_width-19 && event.x-1<margin+panel_width) {if(export_current()) break;continue;}
       bool hit=false;
       if(event.y-1==palette_top-1 && event.x-1>=page_x && event.x-1<margin+panel_width) {
         int direction=event.x-1<page_x+6?-1:1;
@@ -1423,7 +1432,7 @@ int run_visual_editor(const overcalc::RenderOptions& opt) {
   return 0;
 }
 
-int run_tui(const overcalc::RenderOptions& opt) {
+int run_tui(const overcalc::RenderOptions& opt, std::string& exported, std::string& exported_derive) {
   std::string input;
   std::size_t cursor = 0;
   std::string status = "Tab completes; click input/suggestions/preview; :help lists commands";
@@ -1444,7 +1453,7 @@ int run_tui(const overcalc::RenderOptions& opt) {
     return 0;
   }
 
-  return run_visual_editor(opt);
+  return run_visual_editor(opt, exported, exported_derive);
 }
 
 bool is_plain_integer(const std::string& text) {
@@ -1527,6 +1536,7 @@ int main(int argc, char** argv) {
   bool timing_on = false;
   bool batch_on = false;
   bool tui_on = false;
+  bool backend_on = false;
   bool steps_on = false;
   bool read_stdin_input = false;
   bool list_symbols = false;
@@ -1570,6 +1580,7 @@ int main(int argc, char** argv) {
     else if (arg == "--timing") timing_on = true;
     else if (arg == "--batch") batch_on = true;
     else if (arg == "--tui") tui_on = true;
+    else if (arg == "--backend") backend_on = true;
     else if (arg == "--derive" || arg == "--diff" || arg == "--derivative") {
       if (i + 1 >= argc) {
         std::cerr << "error: " << arg << " requires a variable\n";
@@ -1594,13 +1605,27 @@ int main(int argc, char** argv) {
     else expr_parts.push_back(arg);
   }
 
+  if (backend_on) {
+    ropt.color=false;
+    if(tui_on || batch_on || json_output || ast_json || latex_output || timing_on || steps_on ||
+       list_symbols || !derive_var.empty() || ropt.ascii) {
+      std::cerr << "error: --backend is Unicode render-only; cannot combine it with other output or evaluation modes\n";
+      return 2;
+    }
+    if(expr_parts.empty() && file_input.empty()) read_stdin_input=true;
+  }
+
   if (list_symbols) {
     print_supported_symbols(ropt);
     return 0;
   }
 
   if (tui_on) {
-    return run_tui(ropt);
+    std::string exported;
+    int code=run_tui(ropt, exported, derive_var);
+    if(exported.empty()) return code;
+    // The editor's screen and raw-mode guards have now restored the normal terminal.
+    expr_parts={exported};read_stdin_input=false;file_input.clear();
   }
 
   int input_sources = (!expr_parts.empty() ? 1 : 0) + (read_stdin_input ? 1 : 0) + (!file_input.empty() ? 1 : 0);
@@ -1636,6 +1661,15 @@ int main(int argc, char** argv) {
   }
 
   try {
+    if(backend_on) {
+      const auto equation=overcalc::render_equation(expr,ropt);
+      for(auto line:equation.lines) {
+        auto end=line.find_last_not_of(' ');
+        line=end==std::string::npos?"":line.substr(0,end+1);
+        std::cout<<line<<"\n";
+      }
+      return 0;
+    }
     auto start = std::chrono::steady_clock::now();
     auto ast = overcalc::parse(expr);
     if (ast_json) {

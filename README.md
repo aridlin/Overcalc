@@ -115,7 +115,10 @@ additional pages. You can also click the page arrows.
 - Typing **/** or **^** wraps the preceding value as a fraction base/numerator
   or power base. Typing **(** inserts brackets; **)** leaves the field.
 - **Ctrl+U**: clear; **Ctrl+D**: toggle derivative with respect to x.
-- **Esc / Ctrl+C**: exit and restore the terminal. Esc closes an open palette first.
+- **Ctrl+O / Print & exit**: return to the normal terminal and print the current
+  expression exactly through the normal CLI output, including its result. Empty
+  or unfinished expressions stay open. Derivative mode is preserved.
+- **Esc / Ctrl+C**: exit without printing and restore the terminal. Esc closes an open palette first.
 
 ### Editing examples
 
@@ -168,6 +171,52 @@ cmake --install build --prefix "$HOME/.local"
 # Ensure ~/.local/bin is on PATH before /usr/bin.
 ```
 
+## Print the Editor Expression and Exit
+
+Run `overcalc --tui`, type `12/4`, then press **Ctrl+O** or click **Print & exit**
+in the top-right corner. The editor closes and the normal CLI panels remain in
+your terminal, just as if you had run:
+
+```sh
+overcalc '\frac{12}{4}'
+```
+
+This uses the same CLI output path, so options such as `--no-color` and `--steps`
+apply to the printed output. **Esc** still exits without printing. If a field is
+empty or the expression is unfinished, printing leaves the editor open to fix it.
+
+## Unicode Render Backend
+
+Use `--backend` when another program needs only the rendered equation:
+
+```sh
+overcalc --backend '\frac{1}{2}'
+```
+
+```text
+ 1
+───
+ 2
+```
+
+There are no panels, colors, labels, or calculation results on stdout. Output ends
+with a newline. The expression is rendered without evaluation or simplification.
+For example, `overcalc --backend '\frac{1}{0}'` renders the fraction successfully.
+
+Supply an expression argument, a file, or standard input:
+
+```sh
+overcalc --backend '\sqrt{x^2+1}'
+printf '%s\n' '\frac{a+b}{c}' | overcalc --backend
+printf '%s\n' '\alpha_1 + \beta_2' | overcalc --backend --stdin
+overcalc --backend --file formula.tex
+```
+
+Without an argument or `--file`, backend mode reads stdin. Invalid syntax returns
+exit code 1 with diagnostics on stderr and no rendered stdout. Incompatible modes
+such as `--json`, `--tui`, `--steps`, or `--ascii` return exit code 2. Use ordinary
+CLI mode when you also want evaluation, ASCII output, or formatted panels.
+
 ## CLI Options
 
 ```text
@@ -185,7 +234,8 @@ overcalc [options] '<expr>'
 | `--ast-json` | Print AST JSON |
 | `--timing` | Print elapsed execution time |
 | `--batch` | Evaluate one expression per input line |
-| `--tui` | Start interactive editor/preview mode |
+| `--tui` | Start visual editor; Ctrl+O prints through CLI and exits |
+| `--backend` | Render LaTeX as plain Unicode only; stdin by default |
 | `--derive VAR` | Differentiate with respect to `VAR` |
 | `--diff VAR` | Alias for `--derive` |
 | `--derivative VAR` | Alias for `--derive` |
