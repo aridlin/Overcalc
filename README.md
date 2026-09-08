@@ -1,65 +1,73 @@
 # OverCalc
 
-OverCalc is a terminal-native math engine with LaTeX-friendly input, exact arithmetic,
-symbolic simplification, differentiation, Unicode rendering, JSON output, batch mode,
-and an early interactive editor.
+OverCalc is a terminal equation editor and math engine. Build fractions, powers,
+roots, and nested expressions directly on the screen without learning LaTeX.
+It also provides exact arithmetic, symbolic simplification, differentiation,
+JSON output, and batch evaluation through a reusable CLI.
+
+![OverCalc Unicode equation editor with a centered fraction, live result, and clickable formula cards](docs/tui-preview.png)
+
+The preview shows `2 + 2/2`, evaluated as 3. The bottom cards display the actual
+structures they insert; the highlighted denominator is editable.
+
+## Build and Install
+
+Linux:
+
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+ctest --test-dir build --output-on-failure
+cmake --install build --prefix "$HOME/.local"
+export PATH="$HOME/.local/bin:$PATH"
+overcalc --tui
+```
+
+Without installing, run `./build/overcalc --tui`.
+
+Windows with a C++23 compiler available in your shell:
 
 ```powershell
-.\overcalc.exe "((2 + 3)^2 - 9) / 4"
+cmake -S . -B build
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+.\build\Release\overcalc.exe --tui
 ```
 
-```text
-OverCalc - Unicode math - color output
-+- OverCalc / Input ------------------------------------------------+
-| ((2 + 3)^2 - 9) / 4                                               |
-+-------------------------------------------------------------------+
-+- Pretty Render ---------------------------------------------------+
-|                         (2 + 3)^2 - 9                             |
-|                         -------------                             |
-|                               4                                   |
-+-------------------------------------------------------------------+
-+- Result ----------------------------------------------------------+
-| Exact    4                                                        |
-+-------------------------------------------------------------------+
-```
+Single-configuration generators such as MinGW place the executable at
+`.\build\overcalc.exe` instead. The examples below use the installed Linux command;
+on Windows, substitute the path to `overcalc.exe`.
 
-## Build
-
-```powershell
-cmake -S . -B build-mingw
-cmake --build build-mingw
-ctest --test-dir build-mingw --output-on-failure
-```
-
-Requires CMake 3.20+ and a C++23 compiler.
+Requires CMake 3.20+, a C++23 compiler, and a Unicode-capable terminal. The visual
+editor needs at least 40 columns × 18 rows; 80 × 24 or larger is more comfortable.
 
 ## Quick Start
 
 Run a single expression:
 
-```powershell
-.\build-mingw\overcalc.exe "sin(pi/2)+50%"
+```sh
+overcalc "sin(pi/2)+50%"
 ```
 
 Use LaTeX input:
 
-```powershell
-.\build-mingw\overcalc.exe "\frac{1}{3} + \frac{1}{6}"
-.\build-mingw\overcalc.exe "\sqrt[3]{8}"
-.\build-mingw\overcalc.exe "\left(2+3\right)^2"
+```sh
+overcalc "\frac{1}{3} + \frac{1}{6}"
+overcalc "\sqrt[3]{8}"
+overcalc "\left(2+3\right)^2"
 ```
 
 Show steps:
 
-```powershell
-.\build-mingw\overcalc.exe --steps "sqrt(16)+x*0"
+```sh
+overcalc --steps "sqrt(16)+x*0"
 ```
 
 Differentiate:
 
-```powershell
-.\build-mingw\overcalc.exe --derive x "x^2 + sin(x)"
-.\build-mingw\overcalc.exe --json --steps --derive x "x^3"
+```sh
+overcalc --derive x "x^2 + sin(x)"
+overcalc --json --steps --derive x "x^3"
 ```
 
 Batch evaluate a file:
@@ -71,9 +79,9 @@ sin(pi/2)+50%
 x^2
 ```
 
-```powershell
-.\build-mingw\overcalc.exe --batch --file formulas.txt
-.\build-mingw\overcalc.exe --batch --derive x --file formulas.txt
+```sh
+overcalc --batch --file formulas.txt
+overcalc --batch --derive x --file formulas.txt
 ```
 
 ## Interactive TUI Mode
@@ -109,10 +117,37 @@ additional pages. You can also click the page arrows.
 - **Ctrl+U**: clear; **Ctrl+D**: toggle derivative with respect to x.
 - **Esc / Ctrl+C**: exit and restore the terminal. Esc closes an open palette first.
 
-For example, type `12/4` to build a stacked fraction with result 3. Press Tab to
-leave its denominator, then type `+2^3` for a result of 11. To build a fraction
-from empty fields, choose Fraction, type the numerator, press Tab, and type the
-denominator. Results update while editing; incomplete fields remain editable.
+### Editing examples
+
+Start `overcalc --tui`. Begin each example with **Ctrl+U** to clear the canvas.
+“Tab” below means press the Tab key, not type the word.
+
+| Build | Keys or actions | Live result |
+| --- | --- | --- |
+| Addition with a fraction | Type `2+2/2` | `3` |
+| Fraction from empty fields | Click the stacked **a/b** card; type `1`, Tab, `4` | `1/4 ≈ 0.25` |
+| Fraction plus a power | Type `12/4`, Tab, then `+2^3` | `11` |
+| Root inside a fraction | Ctrl+F, Ctrl+R, type `9`, Tab, Tab, type `3` | `1` |
+| Squared brackets | Type `(2+3)^2` | `25` |
+| Greek constant | Find the **π** card using `‹` / `›`, click it, then type `/2` | `pi / 2 ≈ 1.570796327` |
+
+For example, the fraction-plus-power expression is arranged spatially:
+
+```text
+12      3
+── + 2
+ 4
+```
+
+To change a denominator, click its value directly or move down from the
+numerator. **Home / End** move within that field. **Tab** leaves the denominator
+so subsequent operators belong to the surrounding expression. Empty `□` fields
+stay editable; results appear when the expression is complete.
+
+The cards show stacked fractions, raised/lowered scripts, radical overbars,
+brackets, and Greek symbols. **Ctrl+P** focuses the cards; arrow keys browse all
+pages and **Enter** inserts the selected example as editable fields. Click either
+the miniature formula or its caption to insert it with the mouse.
 
 The canvas scrolls to keep the caret visible and the palette follows terminal
 resizes. A terminal of at least 40 columns by 18 rows is required. The editor uses
@@ -201,8 +236,8 @@ quotients, numeric powers, `sin`, `cos`, `tan`, `ln`/`log`, `exp`, `sqrt`, and p
 
 ## JSON Output
 
-```powershell
-.\build-mingw\overcalc.exe --json --steps --derive x "x^2"
+```sh
+overcalc --json --steps --derive x "x^2"
 ```
 
 ```json
@@ -227,7 +262,7 @@ The active direction is:
 
 - stronger simplification and symbolic forms
 - richer derivative rules
-- a more capable interactive TUI with selection menus and history
+- expression selection and saved editor sessions
 - golden renderer tests
 - graphing and REPL/session support
 
