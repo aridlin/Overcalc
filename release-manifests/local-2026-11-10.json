@@ -1,0 +1,26 @@
+{
+  "snapshot": "2026-11-10",
+  "project": "overcalc",
+  "status": "prerelease local-work snapshot",
+  "artifacts": [
+    {
+      "path": "build-release/overcalc",
+      "size": 545016,
+      "sha256": "17d4a1e86e3b70f8034615f37920416a4b349559086e871a7c6a72f6daf46dff"
+    }
+  ],
+  "checks": [
+    {
+      "job": "overcalc",
+      "passed": true,
+      "command": "cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release && cmake --build build-release -j2 && ctest --test-dir build-release --output-on-failure"
+    },
+    {
+      "job": "overcalc-local-editor",
+      "passed": false,
+      "command": ""
+    }
+  ],
+  "notes": [],
+  "runtime": "Linux x86_64 dynamic system libraries for ELF binaries; .exe cross-compiled Windows x64; APK preview/debug; OXT platform independent. Source/API compatibility and hardware behavior are not implied by compilation."
+}
