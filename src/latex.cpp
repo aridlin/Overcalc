@@ -1,5 +1,7 @@
 #include "overcalc/latex.hpp"
 
+#include "overcalc/symbols.hpp"
+
 #include <stdexcept>
 
 namespace overcalc {
@@ -13,7 +15,10 @@ std::string wrap_if_binary(const Expr& e, const std::string& out) {
 
 std::string to_latex(const Expr& expr) {
   if (auto n = dynamic_cast<const Number*>(&expr)) return std::to_string(n->value);
-  if (auto s = dynamic_cast<const Symbol*>(&expr)) return s->name;
+  if (auto s = dynamic_cast<const Symbol*>(&expr)) {
+    if (auto command = symbol_to_latex_command(s->name)) return "\\" + *command;
+    return s->name;
+  }
   if (auto f = dynamic_cast<const Fraction*>(&expr)) return "\\frac{" + to_latex(*f->num) + "}{" + to_latex(*f->den) + "}";
   if (auto q = dynamic_cast<const Sqrt*>(&expr)) return "\\sqrt{" + to_latex(*q->radicand) + "}";
   if (auto p = dynamic_cast<const Superscript*>(&expr)) return wrap_if_binary(*p->base, to_latex(*p->base)) + "^{" + to_latex(*p->exponent) + "}";

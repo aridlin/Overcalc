@@ -1,5 +1,7 @@
 #include "overcalc/parser.hpp"
 
+#include "overcalc/symbols.hpp"
+
 #include <cctype>
 #include <stdexcept>
 
@@ -22,15 +24,25 @@ struct P {
   }
 
   std::unique_ptr<Expr> number(){ ws(); if(i>=s.size()||!std::isdigit((unsigned char)s[i])) throw std::runtime_error("expected number"); long long v=0; while(i<s.size()&&std::isdigit((unsigned char)s[i])) v=v*10+(s[i++]-'0'); return std::make_unique<Number>(v);} 
-  std::unique_ptr<Expr> symbol(){ ws(); if(i>=s.size()||!std::isalpha((unsigned char)s[i])) throw std::runtime_error("expected symbol"); std::string n; while(i<s.size()&&(std::isalnum((unsigned char)s[i])||s[i]=='_')) n.push_back(s[i++]); return std::make_unique<Symbol>(n);} 
+  std::unique_ptr<Expr> symbol(){ ws(); if(i>=s.size()||!std::isalpha((unsigned char)s[i])) throw std::runtime_error("expected symbol"); std::string n; while(i<s.size()&&std::isalnum((unsigned char)s[i])) n.push_back(s[i++]); return std::make_unique<Symbol>(n);} 
   std::unique_ptr<Expr> latex_frac(){ i+=5; P np(brace_content()); P dp(brace_content()); return std::make_unique<Fraction>(np.expr(),dp.expr()); }
   std::unique_ptr<Expr> latex_sqrt(){ i+=5; P rp(brace_content()); return std::make_unique<Sqrt>(rp.expr()); }
+  std::unique_ptr<Expr> latex_command(){
+    ws(); if(i>=s.size()||s[i]!='\\') throw std::runtime_error("expected latex command");
+    ++i; std::string command;
+    while(i<s.size()&&std::isalpha((unsigned char)s[i])) command.push_back(s[i++]);
+    if(command.empty()) throw std::runtime_error("expected latex command name");
+    if(command=="frac"){ P np(brace_content()); P dp(brace_content()); return std::make_unique<Fraction>(np.expr(),dp.expr()); }
+    if(command=="sqrt"){ P rp(brace_content()); return std::make_unique<Sqrt>(rp.expr()); }
+    if(auto symbol_name=latex_command_to_symbol(command)) return std::make_unique<Symbol>(*symbol_name);
+    throw std::runtime_error("unknown latex command: \\" + command);
+  }
 
   std::unique_ptr<Expr> atom(){
     ws();
     if (eat('-')) return std::make_unique<Binary>('*', std::make_unique<Number>(-1), atom());
     if (eat('(')) { auto e=expr(); if(!eat(')')) throw std::runtime_error("missing )"); return e; }
-    if (i<s.size() && s[i]=='\\') { if(s.compare(i,5,"\\frac")==0) return latex_frac(); if(s.compare(i,5,"\\sqrt")==0) return latex_sqrt(); throw std::runtime_error("unknown latex command"); }
+    if (i<s.size() && s[i]=='\\') return latex_command();
     if (i<s.size() && std::isdigit((unsigned char)s[i])) return number();
     return symbol();
   }

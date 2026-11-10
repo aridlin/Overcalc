@@ -1,0 +1,23 @@
+{
+  "snapshot": "2026-11-10",
+  "project": "overcalc-local-editor",
+  "status": "prerelease local-work snapshot",
+  "artifacts": [
+    {
+      "path": "build-release/overcalc",
+      "size": 171576,
+      "sha256": "9b9ebb315f98025d07b3ed7477c673cb21d3b41db02db9ade182b37a2110deb5"
+    }
+  ],
+  "checks": [
+    {
+      "job": "overcalc-local-editor",
+      "passed": false,
+      "command": ""
+    }
+  ],
+  "notes": [
+    "Release rebuild and all 15 CTest checks passed after including local symbols sources."
+  ],
+  "runtime": "Linux x86_64 dynamic system libraries for ELF binaries; .exe cross-compiled Windows x64; APK preview/debug; OXT platform independent. Source/API compatibility and hardware behavior are not implied by compilation."
+}

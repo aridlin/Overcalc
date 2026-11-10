@@ -2,6 +2,7 @@
 
 #include "overcalc/ast.hpp"
 #include "overcalc/parser.hpp"
+#include "overcalc/symbols.hpp"
 
 #include <algorithm>
 #include <sstream>
@@ -66,28 +67,30 @@ static Block vsqrt(const Block& r, const Glyphs& g) {
   return o;
 }
 
-static Block render_expr(const Expr& e, const Glyphs& g) {
+static Block render_expr(const Expr& e, const Glyphs& g, bool ascii) {
   if (auto n = dynamic_cast<const Number*>(&e)) return txt(std::to_string(n->value));
-  if (auto s = dynamic_cast<const Symbol*>(&e)) return txt(s->name);
-  if (auto f = dynamic_cast<const Fraction*>(&e)) return vfrac(render_expr(*f->num, g), render_expr(*f->den, g), g);
-  if (auto q = dynamic_cast<const Sqrt*>(&e)) return vsqrt(render_expr(*q->radicand, g), g);
+  if (auto s = dynamic_cast<const Symbol*>(&e)) return txt(render_symbol(s->name, ascii));
+  if (auto f = dynamic_cast<const Fraction*>(&e)) return vfrac(render_expr(*f->num, g, ascii), render_expr(*f->den, g, ascii), g);
+  if (auto q = dynamic_cast<const Sqrt*>(&e)) return vsqrt(render_expr(*q->radicand, g, ascii), g);
   if (auto p = dynamic_cast<const Superscript*>(&e)) {
-    auto b = render_expr(*p->base, g);
-    auto ex = render_expr(*p->exponent, g);
+    auto b = render_expr(*p->base, g, ascii);
+    auto ex = render_expr(*p->exponent, g, ascii);
+    if (ascii) return hcat(hcat(b, txt("^"), 0), ex, 0);
     ex = pad(ex, 0, std::max(0, (int)b.lines.size() - (int)ex.lines.size()), ex.width);
     b = pad(b, std::max(0, (int)ex.lines.size() - 1), 0, b.width);
     return hcat(b, ex, 0);
   }
   if (auto sb = dynamic_cast<const Subscript*>(&e)) {
-    auto b = render_expr(*sb->base, g);
-    auto sub = render_expr(*sb->sub, g);
+    auto b = render_expr(*sb->base, g, ascii);
+    auto sub = render_expr(*sb->sub, g, ascii);
+    if (ascii) return hcat(hcat(b, txt("_"), 0), sub, 0);
     b = pad(b, 0, std::max(0, (int)sub.lines.size()), b.width);
     sub = pad(sub, std::max(0, (int)b.lines.size() - (int)sub.lines.size()), 0, sub.width);
     return hcat(b, sub, 0);
   }
   auto b = dynamic_cast<const Binary*>(&e);
   if (!b) return txt("?");
-  return hcat(hcat(render_expr(*b->lhs, g), txt(std::string(1, b->op))), render_expr(*b->rhs, g));
+  return hcat(hcat(render_expr(*b->lhs, g, ascii), txt(std::string(1, b->op))), render_expr(*b->rhs, g, ascii));
 }
 
 static std::string panel(const std::string& title, const std::vector<std::string>& content, int width, const Glyphs& g) {
@@ -108,7 +111,7 @@ static std::string panel(const std::string& title, const std::vector<std::string
 std::string render_boxed(const std::string& input, const std::string& result, const RenderOptions& options) {
   auto g = glyphs_for(options);
   std::vector<std::string> pretty;
-  try { auto ast = parse(input); pretty = render_expr(*ast, g).lines; }
+  try { auto ast = parse(input); pretty = render_expr(*ast, g, options.ascii).lines; }
   catch (...) { pretty = {input}; }
   int width = 68;
   std::ostringstream o;

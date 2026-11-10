@@ -1,4 +1,5 @@
 #include "overcalc/format.hpp"
+#include "overcalc/symbols.hpp"
 #include <stdexcept>
 
 namespace overcalc {
@@ -7,7 +8,7 @@ std::string maybe_paren(const Expr& e, const std::string& s) { return dynamic_ca
 }
 std::string to_infix(const Expr& expr) {
   if (auto n = dynamic_cast<const Number*>(&expr)) return std::to_string(n->value);
-  if (auto s = dynamic_cast<const Symbol*>(&expr)) return s->name;
+  if (auto s = dynamic_cast<const Symbol*>(&expr)) return render_symbol(s->name, true);
   if (auto f = dynamic_cast<const Fraction*>(&expr)) return "(" + to_infix(*f->num) + ")/(" + to_infix(*f->den) + ")";
   if (auto q = dynamic_cast<const Sqrt*>(&expr)) return "sqrt(" + to_infix(*q->radicand) + ")";
   if (auto p = dynamic_cast<const Superscript*>(&expr)) return maybe_paren(*p->base,to_infix(*p->base)) + "^" + maybe_paren(*p->exponent,to_infix(*p->exponent));

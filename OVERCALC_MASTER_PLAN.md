@@ -278,13 +278,18 @@ A milestone is done only if:
 - Arithmetic and `\\frac` parsing to unified AST.
 - Exact rational evaluator.
 - Initial panelized Unicode pretty renderer.
+- Superscript/subscript parse+render support, including braced subscripts like `a_{n+1}`.
+- `\\sqrt{...}` parse+render/eval support.
+- ASCII fallback rendering via `--ascii`.
+- Normalized LaTeX serialization via `--latex-output`.
+- Greek symbol command map for common LaTeX symbols such as `\\alpha` and `\\pi`.
 
 ### In-progress next slice (Phase 1 continuation)
-1. Add superscript and subscript AST nodes and parser support (`x^2`, `x_0`, `a_{n+1}`).
-2. Implement root rendering and parsing (`\\sqrt{x}` and indexed roots later).
-3. Introduce ASCII fallback rendering (`--ascii`) for incompatible terminals.
-4. Add renderer snapshot tests for nested fractions and precedence.
-5. Add `--latex-output` mode for normalized LaTeX serialization.
+1. Add broader renderer snapshot coverage for nested fractions, roots, scripts, and precedence.
+2. Add source-span-aware diagnostics for parser errors.
+3. Improve operator precedence formatting in infix, LaTeX, and pretty render output.
+4. Add indexed roots (`\\sqrt[n]{x}`) after the command parser grows optional-argument support.
+5. Begin exact symbolic simplification kernels for Phase 3.
 
 ### Short-term milestones (next 2 weeks)
 - Week A: superscript/subscript parse+render + tests.
